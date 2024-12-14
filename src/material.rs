@@ -111,7 +111,7 @@ impl Scatter for Lambertian {
 impl Scatter for Metal {
     fn scatter<T: Scatter>(&self, ray: &Ray, hit: &HitRecord<T>) -> Option<(Vec3, Ray)> {
         let reflected = ray.direction().reflect(hit.normal());
-        let reflected = reflected.unit() + (self.fuzz * Vec3::random_unit());
+        let reflected = reflected.unit() + (Vec3::random_unit() * self.fuzz);
         let scattered = Ray::new(hit.point(), reflected, ray.time());
         if scattered.direction().dot(hit.normal()) > 0.0 {
             Some((self.albedo, scattered))

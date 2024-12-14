@@ -6,37 +6,39 @@ use std::{
 use crate::{aabb::Axis, interval::Interval, random_0_1, random_range};
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Vec3 {
-    x: f64,
-    y: f64,
-    z: f64,
+pub struct Vec3<T = f64> {
+    x: T,
+    y: T,
+    z: T,
 }
 
-impl Vec3 {
-    pub const fn new(x: f64, y: f64, z: f64) -> Self {
+impl<T: Copy> Vec3<T> {
+    pub const fn new(x: T, y: T, z: T) -> Self {
         Self { x, y, z }
     }
 
-    pub const fn x(self) -> f64 {
+    pub const fn x(self) -> T {
         self.x
     }
 
-    pub const fn y(self) -> f64 {
+    pub const fn y(self) -> T {
         self.y
     }
 
-    pub const fn z(self) -> f64 {
+    pub const fn z(self) -> T {
         self.z
     }
 
-    pub const fn get(&self, axis: Axis) -> f64 {
+    pub const fn get(&self, axis: Axis) -> T {
         match axis {
             Axis::X => self.x,
             Axis::Y => self.y,
             Axis::Z => self.z,
         }
     }
+}
 
+impl Vec3<f64> {
     pub fn random() -> Self {
         Vec3::new(random_0_1(), random_0_1(), random_0_1())
     }
@@ -53,12 +55,12 @@ impl Vec3 {
         )
     }
 
-    pub const fn lenght_squared(self) -> f64 {
+    pub const fn length_squared(self) -> f64 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
-    pub fn lenght(self) -> f64 {
-        self.lenght_squared().sqrt()
+    pub fn length(self) -> f64 {
+        self.length_squared().sqrt()
     }
 
     pub const fn dot(self, other: Self) -> f64 {
@@ -74,17 +76,17 @@ impl Vec3 {
     }
 
     pub fn unit(self) -> Self {
-        self / self.lenght()
+        self / self.length()
     }
 
     pub fn random_unit() -> Self {
         let range = Interval::new(-1.0, 1.0);
         let mut p = Self::random_range(range);
-        let mut lensq = p.lenght_squared();
+        let mut lensq = p.length_squared();
 
         while lensq <= 1e-160 || lensq > 1.0 {
             p = Self::random_range(range);
-            lensq = p.lenght_squared();
+            lensq = p.length_squared();
         }
 
         p / lensq.sqrt()
@@ -93,11 +95,11 @@ impl Vec3 {
     pub fn random_in_disk() -> Self {
         let range = Interval::new(-1.0, 1.0);
         let mut p = Self::new(random_range(range), random_range(range), 0.0);
-        let mut lensq = p.lenght_squared();
+        let mut lensq = p.length_squared();
 
         while lensq > 1.0 {
             p = Self::random_range(range);
-            lensq = p.lenght_squared();
+            lensq = p.length_squared();
         }
 
         p
@@ -118,7 +120,7 @@ impl Vec3 {
     }
 
     pub fn reflect(self, normal: Self) -> Self {
-        self - (2.0 * self.dot(normal)) * normal
+        self - normal * (2.0 * self.dot(normal))
     }
 
     pub fn invert(self) -> Self {
@@ -127,61 +129,72 @@ impl Vec3 {
 
     pub fn refract(self, normal: Self, etai_over_etat: f64) -> Self {
         let cos_theta = self.neg().dot(normal).min(1.0);
-        let r_perpendicular = etai_over_etat * (self + cos_theta * normal);
-        let r_parallel = -f64::sqrt(f64::abs(1.0 - r_perpendicular.lenght_squared())) * normal;
+        let r_perpendicular = (self + normal * cos_theta) * etai_over_etat;
+        let r_parallel = normal * -f64::sqrt(f64::abs(1.0 - r_perpendicular.length_squared()));
         r_perpendicular + r_parallel
     }
 }
 
-impl Neg for Vec3 {
-    type Output = Vec3;
+impl<T> Neg for Vec3<T>
+where
+    T: Neg<Output = T> + Copy,
+{
+    type Output = Self;
 
     fn neg(self) -> Self::Output {
         Vec3::new(-self.x, -self.y, -self.z)
     }
 }
 
-impl Add for Vec3 {
-    type Output = Vec3;
+impl<T> Add for Vec3<T>
+where
+    T: Add<Output = T> + Copy,
+{
+    type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
         Vec3::new(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
     }
 }
 
-impl Sub for Vec3 {
-    type Output = Vec3;
+impl<T> Sub for Vec3<T>
+where
+    T: Sub<Output = T> + Copy,
+{
+    type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
         Vec3::new(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
     }
 }
 
-impl Mul<f64> for Vec3 {
-    type Output = Vec3;
+impl<T> Mul<T> for Vec3<T>
+where
+    T: Mul<Output = T> + Copy,
+{
+    type Output = Self;
 
-    fn mul(self, rhs: f64) -> Self::Output {
+    fn mul(self, rhs: T) -> Self::Output {
         Vec3::new(self.x * rhs, self.y * rhs, self.z * rhs)
     }
 }
 
-impl Mul<Vec3> for f64 {
-    type Output = Vec3;
+impl<T> Div<T> for Vec3<T>
+where
+    f64: Div<T, Output = T> + Copy,
+    Vec3<T>: Mul<T, Output = Self>,
+{
+    type Output = Self;
 
-    fn mul(self, rhs: Vec3) -> Self::Output {
-        Vec3::new(self * rhs.x, self * rhs.y, self * rhs.z)
-    }
-}
-
-impl Div<f64> for Vec3 {
-    type Output = Vec3;
-
-    fn div(self, rhs: f64) -> Self::Output {
+    fn div(self, rhs: T) -> Self::Output {
         self * (1.0 / rhs)
     }
 }
 
-impl Sum for Vec3 {
+impl<T> Sum for Vec3<T>
+where
+    Vec3<T>: Add<Output = Self> + Default,
+{
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::default(), |acc, v| acc + v)
     }

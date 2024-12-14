@@ -1,14 +1,32 @@
 #[derive(Debug, Default, Clone, Copy, PartialEq)]
-pub struct Interval {
-    min: f64,
-    max: f64,
+pub struct Interval<T = f64> {
+    min: T,
+    max: T,
 }
 
-impl Interval {
-    pub const fn new(min: f64, max: f64) -> Self {
+impl<T: Copy> Interval<T> {
+    pub const fn new(min: T, max: T) -> Self {
         Self { min, max }
     }
 
+    pub const fn min(&self) -> T {
+        self.min
+    }
+
+    pub const fn max(&self) -> T {
+        self.max
+    }
+
+    pub const fn min_mut(&mut self) -> &mut T {
+        &mut self.min
+    }
+
+    pub const fn max_mut(&mut self) -> &mut T {
+        &mut self.max
+    }
+}
+
+impl Interval<f64> {
     pub const fn inf() -> Self {
         Self::new(f64::NEG_INFINITY, f64::INFINITY)
     }
@@ -26,22 +44,6 @@ impl Interval {
         let min = self.min().min(other.min());
         let max = self.max().max(other.max());
         Self::new(min, max)
-    }
-
-    pub const fn min(&self) -> f64 {
-        self.min
-    }
-
-    pub const fn max(&self) -> f64 {
-        self.max
-    }
-
-    pub const fn min_mut(&mut self) -> &mut f64 {
-        &mut self.min
-    }
-
-    pub const fn max_mut(&mut self) -> &mut f64 {
-        &mut self.max
     }
 
     pub const fn size(&self) -> f64 {

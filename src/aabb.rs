@@ -26,6 +26,10 @@ pub struct Aabb {
 
 impl Aabb {
     pub const fn new(x: Interval, y: Interval, z: Interval) -> Self {
+        const DELTA: f64 = 0.0001; // padding 0 sized intervals
+        let x = if x.size() < DELTA { x.expand(DELTA) } else { x };
+        let y = if y.size() < DELTA { y.expand(DELTA) } else { y };
+        let z = if z.size() < DELTA { z.expand(DELTA) } else { z };
         Self { x, y, z }
     }
 

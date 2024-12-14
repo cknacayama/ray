@@ -85,4 +85,14 @@ impl Hit for Bvh {
     fn aabb(&self) -> Aabb {
         self.bbox
     }
+
+    fn count(&self) -> usize {
+        match self.node {
+            BvhNode::Leaf(ref arc) => arc.count(),
+            BvhNode::Node {
+                ref left,
+                ref right,
+            } => left.count() + right.count(),
+        }
+    }
 }

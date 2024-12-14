@@ -61,6 +61,7 @@ pub trait Hit {
 
     fn hit(&self, ray: &Ray, ray_t: Interval) -> Option<HitRecord<Self::Material>>;
     fn aabb(&self) -> Aabb;
+    fn count(&self) -> usize;
 }
 
 pub trait DynHit: Hit<Material = Material> + Send + Sync + Debug {}
@@ -113,16 +114,8 @@ impl Hit for HitList {
     fn aabb(&self) -> Aabb {
         self.bbox
     }
-}
 
-impl<H: Hit + ?Sized> Hit for Box<H> {
-    type Material = H::Material;
-
-    fn hit(&self, ray: &Ray, ray_t: Interval) -> Option<HitRecord<Self::Material>> {
-        (**self).hit(ray, ray_t)
-    }
-
-    fn aabb(&self) -> Aabb {
-        (**self).aabb()
+    fn count(&self) -> usize {
+        self.list.len()
     }
 }

@@ -51,14 +51,14 @@ impl Camera {
         let v = w.cross(u);
         let center = lookfrom;
 
-        let viewport_u = viewport_width * u;
-        let viewport_v = viewport_height * -v;
+        let viewport_u = u * viewport_width;
+        let viewport_v = -v * viewport_height;
 
         let pixel_delta_u = viewport_u / (img_width as f64);
         let pixel_delta_v = viewport_v / (img_height as f64);
 
-        let viewport_upper_left = center - (focus_dist * w) - viewport_u / 2.0 - viewport_v / 2.0;
-        let pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+        let viewport_upper_left = center - (w * focus_dist) - viewport_u / 2.0 - viewport_v / 2.0;
+        let pixel00_loc = viewport_upper_left + (pixel_delta_u + pixel_delta_v) * 0.5;
 
         let disk_radius = focus_dist * (defocous_angle / 2.0).to_radians().tan();
         let disk_u = u * disk_radius;
@@ -89,8 +89,8 @@ impl Camera {
 
         let offset = Self::sample_square();
         let pixel_sample = self.pixel00_loc
-            + ((i + offset.x()) * self.pixel_delta_u)
-            + ((j + offset.y()) * self.pixel_delta_v);
+            + (self.pixel_delta_u * (i + offset.x()))
+            + (self.pixel_delta_v * (j + offset.y()));
 
         let origin = if self.defocous_angle <= 0.0 {
             self.center
@@ -105,7 +105,7 @@ impl Camera {
 
     fn disk_sample(&self) -> Vec3 {
         let p = Vec3::random_in_disk();
-        self.center + (p.x() * self.disk_u) + (p.y() * self.disk_v)
+        self.center + (self.disk_u * p.x()) + (self.disk_v * p.y())
     }
 
     fn sample_square() -> Vec3 {
@@ -163,18 +163,21 @@ impl Camera {
     {
         let mut w = BufWriter::new(writer);
 
+        let count = world.count() as f64;
+        let count_log2 = (count).log2() as u32;
+
         writeln!(w, "P3\n{} {}\n255", self.img_width, self.img_height).unwrap();
 
         let sample_scale = 1.0 / sample_count as f64;
         for j in 0..self.img_height {
             eprintln!("\nScanlines remaining {}", self.img_height - j);
             for i in 0..self.img_width {
-                let color = if sample_count < 120 {
+                let color = if (sample_count * count_log2) < 1000 {
                     self.sample_seq(i, j, sample_count, world, max_depth)
                 } else {
                     self.sample_par(i, j, sample_count, world, max_depth)
                 };
-                let color = sample_scale * color;
+                let color = color * sample_scale;
                 let (r, g, b) = color.to_color();
                 writeln!(w, "{} {} {}", r, g, b).unwrap();
             }
